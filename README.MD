@@ -1,6 +1,6 @@
 # Multi-Label Chest X-Ray Classifier
 
-This project implements a robust pipeline for training a multi-label image classification model on chest X-ray data, using deep learning and transfer learning techniques. The model predicts the presence of multiple conditions in a single X-ray image.
+This project provides a robust, end-to-end pipeline for multi-label classification of chest X-ray images using deep learning and transfer learning. The model predicts the presence of multiple thoracic diseases in a single X-ray image, leveraging modern transformer-based architectures.
 
 ---
 
@@ -15,29 +15,31 @@ This project implements a robust pipeline for training a multi-label image class
 - [Model Training and Evaluation](#model-training-and-evaluation)
 - [Results](#results)
 - [Future Improvements](#future-improvements)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
 ---
 
 ## Features
 
-- Handles multi-label classification tasks for medical images.
-- Utilizes the EfficientNetB0 architecture with transfer learning.
-- Provides detailed evaluation metrics including classification report, Hamming loss, and Jaccard scores.
-- Implements advanced callbacks for training optimization:
-  - ReduceLROnPlateau
-  - EarlyStopping
-- Extensive error handling and logging for image loading and preprocessing.
+- Handles multi-label classification for medical images (14 thoracic disease classes).
+- Utilizes Swin Transformer (or configurable backbone) with transfer learning via [timm](https://github.com/huggingface/pytorch-image-models).
+- Implements advanced evaluation metrics: Precision, Recall, F1-score, and AUC (macro).
+- Includes threshold optimization for best validation precision.
+- Robust error handling and logging for data loading and preprocessing.
+- Modular, extensible codebase for research and experimentation.
 
 ---
 
 ## Technologies Used
 
-- **Python**
-- **TensorFlow/Keras** for deep learning model implementation.
-- **Pandas** for data manipulation.
-- **NumPy** for numerical computations.
-- **scikit-learn** for data preprocessing and evaluation metrics.
-- **EfficientNetB0** as the base model for transfer learning.
+- **Python 3.8+**
+- **PyTorch** for deep learning model implementation.
+- **timm** for state-of-the-art vision backbones (Swin Transformer, etc.).
+- **torchmetrics** for evaluation metrics.
+- **Pandas** and **NumPy** for data manipulation.
+- **scikit-learn** (optional, for further analysis).
+- **Pillow** for image processing.
 
 ---
 
@@ -45,9 +47,10 @@ This project implements a robust pipeline for training a multi-label image class
 
 ```plaintext
 .
-|-- script.py                # Main implementation file
-|-- merged_CXLSeg_data.csv   # Input dataset (CSV format)
+|-- script.py                # Main implementation file (PyTorch pipeline)
+|-- data.csv                 # Input dataset (CSV format)
 |-- images/                  # Directory containing chest X-ray images
+|-- output/                  # Directory for model checkpoints and logs
 |-- README.md                # Documentation
 |-- requirements.txt         # Python dependencies
 ```
@@ -56,88 +59,98 @@ This project implements a robust pipeline for training a multi-label image class
 
 ## Dataset
 
-The project uses a dataset containing chest X-ray images annotated with multiple conditions. Each X-ray image is associated with one or more labels indicating the medical conditions present. The dataset should:
+The project expects a dataset of chest X-ray images annotated with multiple disease labels. Each image is associated with one or more binary labels indicating the presence of specific conditions.
 
-- Contain a CSV file with image paths and labels.
-- Include a column named `DicomPath_y` specifying the file paths to the X-ray images.
+- The CSV file (`data.csv`) should contain:
+  - A column `DicomPath_y` specifying the file path to each X-ray image.
+  - Columns for each disease label (e.g., `Atelectasis`, `Cardiomegaly`, etc.), with values 0 (absent), 1 (present), or -1/NaN (treated as 0).
+  - A `split` column indicating the data split (`train`, `validate`, `test`).
 
-### Example CSV Format:
+### Example CSV Format
 
-| DicomPath_y       | Atelectasis | Cardiomegaly | Pneumonia | ... |
-|-------------------|-------------|--------------|-----------|-----|
-| path/to/image1.dcm | 1           | 0            | 0         | ... |
-| path/to/image2.dcm | 0           | 1            | 1         | ... |
+| DicomPath_y        | Atelectasis | Cardiomegaly | Pneumonia | ... | split    |
+|--------------------|-------------|--------------|-----------|-----|----------|
+| images/img1.png    | 1           | 0            | 0         | ... | train    |
+| images/img2.png    | 0           | 1            | 1         | ... | validate |
+| images/img3.png    | 0           | 0            | 0         | ... | test     |
 
 ---
 
 ## Installation
 
-1. Clone the repository:
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/your-repo/multi-label-xray-classifier.git
    cd multi-label-xray-classifier
    ```
 
-2. Install required dependencies:
+2. **Install required dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Ensure the dataset is available in the correct structure.
+3. **Prepare the dataset:**
+   - Place your `data.csv` and images in the appropriate directories as described above.
 
 ---
 
 ## Usage
 
-1. Initialize the classifier:
-   ```python
-   from script import ConsistentMultiLabelXRayClassifier
+1. **Configure settings**  
+   Edit the `Config` class in `script.py` to adjust model backbone, batch size, learning rate, etc.
 
-   classifier = ConsistentMultiLabelXRayClassifier(data_path='merged_CXLSeg_data.csv')
+2. **Run the training and evaluation pipeline:**
+   ```bash
+   python script.py
    ```
 
-2. Train and evaluate the model:
-   ```python
-   model, history, mlb = classifier.train_and_evaluate(epochs=15)
-   ```
+   - The script will:
+     - Load and preprocess the data.
+     - Train the model with the specified configuration.
+     - Evaluate on validation and test sets.
+     - Optimize the classification threshold for best precision.
+     - Save the best model checkpoint and log results.
 
-3. View evaluation metrics in the console output.
+3. **Check the `output/` directory** for saved models and logs.
 
 ---
 
 ## Model Training and Evaluation
 
-### Training
-
-The training pipeline:
-- Loads and preprocesses images.
-- Uses transfer learning with the EfficientNetB0 model.
-- Fine-tunes the model with a fully connected head for multi-label classification.
-
-### Evaluation
-
-The evaluation includes:
-- Classification report with precision, recall, and F1-score for each label.
-- Hamming loss.
-- Jaccard scores (micro and macro averages).
+- **Model:** Swin Transformer (default) or configurable backbone from `timm`.
+- **Loss:** Binary Cross-Entropy with Logits (multi-label).
+- **Metrics:** Precision, Recall, F1-score, AUC (macro, thresholded).
+- **Threshold Optimization:** Automatically searches for the best threshold on the validation set.
+- **Logging:** Detailed logs for each epoch, including metrics and checkpointing.
 
 ---
 
 ## Results
 
-- **Accuracy**: Achieved XX% on validation data.
-- **Precision/Recall/F1**: Comprehensive metrics for each condition.
-- **Hamming Loss**: YY%.
-- **Jaccard Score**: ZZ (micro), AA (macro).
+- **Best validation precision** and corresponding threshold are reported.
+- **Final test set metrics** (loss, precision, recall, F1, AUC) are logged.
+- Example (replace with your actual results):
+
+  ```
+  Best validation precision: 0.82 at threshold 0.45
+  Test set results:
+    Loss: 0.23
+    Precision: 0.81
+    Recall: 0.78
+    F1-score: 0.79
+    AUC: 0.88
+  ```
 
 ---
 
 ## Future Improvements
 
-- Add support for additional datasets.
-- Implement data augmentation to improve model generalization.
-- Experiment with other architectures like EfficientNetV2 or Vision Transformers.
-- Optimize preprocessing for large datasets using parallelization.
+- Add support for additional or custom backbones (e.g., ConvNeXt, EfficientNet).
+- Implement data augmentation and advanced regularization.
+- Add per-class threshold optimization.
+- Integrate explainability (Grad-CAM, saliency maps).
+- Support for DICOM image loading and preprocessing.
+- Distributed/multi-GPU training.
 
 ---
 
@@ -149,8 +162,9 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## Acknowledgments
 
-- TensorFlow/Keras team for providing pre-trained EfficientNet models.
+- [timm](https://github.com/huggingface/pytorch-image-models) for backbone models.
 - Dataset contributors for their invaluable work in medical imaging.
+- PyTorch and torchmetrics developers for their open-source tools.
 
 ---
 

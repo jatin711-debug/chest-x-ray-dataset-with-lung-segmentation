@@ -1,0 +1,21 @@
+# Core Libraries
+numpy
+pandas
+torch
+torchvision
+Pillow
+
+# NLP (Hugging Face Transformers)
+transformers==4.38.1
+tokenizers==0.15.1
+
+# Web Framework
+Flask==3.0.2
+
+# Deployment & Miscellaneous
+gunicorn==21.2.0
+
+# Additional Libraries
+torchmetrics
+pydantic
+timm
