@@ -1,6 +1,6 @@
 # This computer program learns to look at pictures of chests (like from a doctor's camera).
 # It tries to find important things in the pictures.
-
+   
 # --- Getting Ready ---
 # These lines are like gathering all the toys and tools the computer needs to play the learning game.
 # It needs tools to:
