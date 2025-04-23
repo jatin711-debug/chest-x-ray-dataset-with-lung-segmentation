@@ -153,7 +153,6 @@ class Config(BaseModel):
 # Initialize config with defaults first
 config = Config()
 
-
 # === Logging Setup ===
 def setup_logging(output_dir: str, local_rank: int):
     """Sets up logging for the training process."""
@@ -614,20 +613,22 @@ class MedicalDataset(Dataset):
 
 # === DALI Data Loading ===
 def create_dali_pipeline(
-    batch_size, num_threads, device_id, seed, data_paths, labels, img_size, is_training
+    batch_size, num_threads, device_id, seed, data_paths, labels, img_size, is_training, grayscale=False
 ):
-    # ... existing code ...
-    # Ensure grayscale handling if needed (currently assumes RGB)
-    output_type = types.RGB  # Change to types.GRAY if config.grayscale is True
-    img_mean = [0.485 * 255, 0.456 * 255, 0.406 * 255]  # Adjust if grayscale
-    img_std = [0.229 * 255, 0.224 * 255, 0.225 * 255]  # Adjust if grayscale
-    output_layout = "CHW"  # Adjust if grayscale (e.g., "HW")? DALI usually handles this.
+    """Creates a DALI pipeline for image loading and augmentation."""
+    output_type = types.GRAY if grayscale else types.RGB
+    num_channels = 1 if grayscale else 3
+    # Adjust mean/std for grayscale if needed (using ImageNet mean for single channel)
+    img_mean = [0.485 * 255] if grayscale else [0.485 * 255, 0.456 * 255, 0.406 * 255]
+    img_std = [0.229 * 255] if grayscale else [0.229 * 255, 0.224 * 255, 0.225 * 255]
+    output_layout = "CHW"
 
     pipeline = Pipeline(
         batch_size=batch_size,
         num_threads=num_threads,
         device_id=device_id,
         seed=seed + device_id,
+        # prefetch_queue_depth=2 # Optional: Can sometimes improve performance
     )
     with pipeline:
         # Use external source for file paths and labels
@@ -639,61 +640,82 @@ def create_dali_pipeline(
             name="INPUT_LABELS",
             cycle="quiet",
             device="cpu",
-            batch=False,
-        )  # Process labels per sample
+            batch=False, # Process labels per sample
+        )
 
         # Decode images
+        # Use 'mixed' device for potential HW acceleration if available
         images = fn.decoders.image(
             image_files, device="mixed", output_type=output_type
-        )  # Decode on GPU
+        )
 
         # Resize
-        images = fn.resize(images, device="gpu", size=[img_size, img_size])
+        # Use INTERP_LINEAR for resizing, common practice
+        images = fn.resize(images, device="gpu", size=[img_size, img_size], interp_type=types.INTERP_LINEAR)
 
         # Augmentations (on GPU)
         if is_training:
+            # Geometric augmentations
             images = fn.flip(images, horizontal=fn.random.coin_flip(probability=0.5))
             images = fn.rotate(
-                images, angle=fn.random.uniform(range=(-15, 15)), fill_value=0
-            )  # Using 0 fill for simplicity
-            # Only apply color twist if not grayscale
-            if output_type == types.RGB:
-                images = fn.color_twist(
+                images, angle=fn.random.uniform(range=(-15, 15)), fill_value=0, interp_type=types.INTERP_LINEAR
+            )
+            # Brightness/Contrast adjustments (only if not grayscale)
+            if not grayscale:
+                images = fn.brightness_contrast(
                     images,
                     brightness=fn.random.uniform(range=(0.9, 1.1)),
-                    contrast=fn.random.uniform(range=(0.9, 1.1)),
+                    contrast=fn.random.uniform(range=(0.9, 1.1))
                 )
             # Note: DALI doesn't have direct equivalents for ElasticTransform, GridDistortion, CoarseDropout easily.
             # More complex augmentations might need custom operators or fallback to CPU Albumentations before DALI.
 
         # Normalize and transpose NCHW
         images = fn.crop_mirror_normalize(
-            images.gpu(),
+            images.gpu(), # Ensure data is on GPU before this op
             dtype=types.FLOAT,
             mean=img_mean,
             std=img_std,
             output_layout=output_layout,
         )
 
-        pipeline.set_outputs(images, dali_labels)
+        pipeline.set_outputs(images, dali_labels.gpu()) # Move labels to GPU as well
     return pipeline
 
 
 class DALIDataLoader:
-    # ... existing code ...
+    """Wraps the DALI pipeline in a PyTorch-compatible iterator."""
     def __init__(self, df: pd.DataFrame, config: Config, is_training: bool, data_dir: str):
-        # ... existing code ...
+        self.batch_size = config.batch_size
+        self.num_threads = config.num_workers
+        self.device_id = config.local_rank if config.local_rank != -1 else 0 # DALI needs a specific GPU ID
+        self.data_dir = data_dir
+        self.is_training = is_training
+        self.num_classes = config.num_classes
+        self.img_size = config.img_size
+        self.grayscale = config.grayscale
+
         # Ensure the correct column name is used for file paths
-        path_col = "dicompath_y"  # Or whatever the standardized column name is
+        path_col = "dicompath_y" # Standardized column name
         if path_col not in df.columns:
             raise ValueError(
                 f"Column '{path_col}' not found in DataFrame for DALI file paths."
             )
+        # Create full paths
         self.file_paths = [
             os.path.join(self.data_dir, row[path_col]) for _, row in df.iterrows()
         ]
-        # ... rest of __init__ ...
-        # Pass grayscale info to pipeline creation if needed
+        # Extract labels
+        label_cols = MedicalDataset.LABEL_COLS
+        if not all(col in df.columns for col in label_cols):
+             missing = [col for col in label_cols if col not in df.columns]
+             raise ValueError(f"Missing required label columns in DataFrame for DALI: {missing}")
+        self.labels = df[label_cols].values.astype(np.float32)
+
+        if not self.file_paths or not len(self.labels):
+             raise ValueError("DALI DataLoader: file_paths or labels list is empty.")
+
+        # Create the DALI pipeline
         self.pipeline = create_dali_pipeline(
             batch_size=self.batch_size,
             num_threads=self.num_threads,
@@ -701,13 +723,43 @@ class DALIDataLoader:
             seed=config.seed,
             data_paths=self.file_paths,
             labels=self.labels,
-            img_size=config.img_size,
+            img_size=self.img_size,
             is_training=self.is_training,
-            # Pass grayscale=config.grayscale if create_dali_pipeline uses it
+            grayscale=self.grayscale
         )
-        # ... rest of __init__ ...
 
-    # ... existing __iter__ and __len__ ...
+        # Determine the policy for the last batch
+        last_batch_policy = LastBatchPolicy.DROP if is_training else LastBatchPolicy.PARTIAL
+        world_size = dist.get_world_size() if dist.is_initialized() else 1
+        self.epoch_size = math.ceil(len(self.file_paths) / world_size)
+
+        # Build the iterator
+        self.dali_iterator = DALIGenericIterator(
+            pipelines=[self.pipeline],
+            output_map=["image", "label"], # Match pipeline's set_outputs order
+            size=self.epoch_size, # Number of samples in the epoch for this rank
+            reader_name="Reader", # Optional name
+            last_batch_policy=last_batch_policy,
+            auto_reset=True # Automatically reset iterator at the end of epoch
+        )
+
+    def __iter__(self):
+        return self.dali_iterator.__iter__() # Return the DALI iterator
+
+    def __len__(self):
+        # Calculate number of batches per epoch for this rank
+        world_size = dist.get_world_size() if dist.is_initialized() else 1
+        samples_per_rank = math.ceil(len(self.file_paths) / world_size)
+        num_batches = math.ceil(samples_per_rank / self.batch_size)
+        # Adjust for drop_last during training
+        if self.is_training and samples_per_rank % self.batch_size != 0:
+             num_batches = samples_per_rank // self.batch_size # DALI iterator with DROP policy handles this
+
+        # The DALIGenericIterator handles sharding, so __len__ should return batches per rank
+        # However, DALIGenericIterator itself doesn't have a reliable __len__ before iteration.
+        # We estimate it based on the total size and batch size.
+        # Note: This might not be perfectly accurate if LastBatchPolicy.PARTIAL is used and the last batch is smaller.
+        return num_batches
 
 
 # === Evaluation Function ===

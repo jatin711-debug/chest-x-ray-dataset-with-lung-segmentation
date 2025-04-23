@@ -1,0 +1,117 @@
+# This computer program learns to look at pictures of chests (like from a doctor's camera).
+# It tries to find important things in the pictures.
+
+# --- Getting Ready ---
+# These lines are like gathering all the toys and tools the computer needs to play the learning game.
+# It needs tools to:
+# - Find the picture files (like finding a specific coloring book).
+# - Make random choices (like picking a surprise toy).
+# - Understand instructions (like listening to rules).
+# - Count and do simple math (like counting your fingers).
+# - Keep lists of things (like a list of your favorite animals).
+# - Have a brain to learn (the 'torch' tool).
+# - Have eyes to see the pictures (the 'timm' tool).
+# - Get the pictures ready (like cutting out shapes for crafts).
+# - Change the pictures a little (like turning a drawing upside down) to learn better.
+# - Open the picture files (like opening a book).
+# - Write notes about what it's doing (like keeping a diary).
+# - Use a stopwatch to see how long things take.
+# - Use special fast parts to learn quicker (like using roller skates instead of walking).
+# - Work with friends (other computers) to learn together.
+
+# --- Settings ---
+# This is like the recipe for the learning game.
+# It tells the computer:
+# - Which special eyes to use to look at the pictures.
+# - How many different things it needs to look for (like finding 14 different shapes).
+# - How big the pictures should be.
+# - How fast to learn (not too fast, not too slow!).
+# - How many times to look at all the pictures (like reading a book 15 times).
+# - Where the pictures are stored.
+# - Where to save what it learns.
+# - A secret number to make sure it does the same thing every time we run it.
+
+# --- Making Notes ---
+# This part sets up the computer's diary so it can write down what it's doing.
+
+# --- Working Together ---
+# This part helps computers talk to each other if we use more than one to learn faster.
+
+# --- Making Random Things the Same ---
+# This makes sure that even if the computer picks random things, it picks the same random things every time, like always picking the red crayon first.
+
+# --- Measuring Mistakes ---
+# This is a special way for the computer to know when it makes a mistake, especially for tricky pictures.
+
+# --- The Computer's Eyes and Brain ---
+# This builds the main part that learns.
+# It can use one set of eyes or many sets of eyes working together.
+# It has:
+# - Eyes: To look at the picture and find patterns.
+# - Brain: To make a guess based on what the eyes see.
+# It can also pause learning for the eyes while the brain learns more.
+
+# --- Getting Pictures Ready ---
+# This part gets the pictures ready for the computer to look at.
+# It opens the picture file, makes it the right size, and maybe flips it or changes colors a little.
+# It turns the picture into numbers the computer brain can understand.
+# If a picture is missing or broken, it just uses an empty space.
+# There's a regular way and a super-fast way (DALI) to do this.
+
+# --- Checking the Learning ---
+# This is like a quiz for the computer.
+# It looks at pictures it hasn't learned from and makes guesses.
+# We check how many guesses are right and wrong.
+# We use score keepers (like counting points) to see how well it did overall.
+# It tells us the computer's score (like getting stars on a test).
+
+# --- Teaching the Computer ---
+# This is where the computer learns!
+# It looks at a few pictures at a time.
+# It makes a guess.
+# It checks if the guess was right or wrong using the 'mistake measurer'.
+# If it was wrong, it changes its brain a little bit to do better next time.
+# It does this over and over again for all the training pictures.
+# It uses the 'scaler' tool to help it learn faster without messing up.
+# It slowly changes how fast it learns using the 'scheduler'.
+
+# --- Saving the Brain ---
+# After learning, we save the computer's brain so we can use it later without teaching it all over again.
+# We save it in special formats (like saving a drawing).
+
+# --- The Learning Adjuster ---
+# This tool helps the computer change its brain when it learns.
+# It decides how much to change the brain based on the mistakes it made.
+# We can tell it to change different parts of the brain at different speeds.
+
+# --- Putting Pictures Together ---
+# This helper makes sure that if some pictures couldn't be loaded, the computer doesn't get confused.
+
+# --- The Main Plan ---
+# This is the main part that runs everything in order:
+# 1. Get ready: Set up notes, connect computers if needed, set the secret number.
+# 2. Load the list: Read the file that lists all the pictures and what's in them.
+# 3. Clean up: Make sure the list is easy to read and the labels are simple (like 0 for 'no' and 1 for 'yes').
+# 4. Split the pictures: Divide pictures into groups for learning, checking, and a final test.
+# 5. Prepare the pictures: Create the tools (loaders) that get batches of pictures ready.
+# 6. Build the brain: Create the computer's eyes and brain model.
+# 7. Get the adjuster: Create the tool that helps the brain learn (optimizer).
+# 8. Get the mistake measurer: Choose how the computer knows it made a mistake.
+# 9. Get the learning speed controller: Set up how the learning speed changes over time.
+# 10. Start Learning Loop:
+    # - Repeat for the chosen number of times (epochs):
+        # - Teach the computer using the training pictures.
+        # - Check how well it learned using the checking pictures.
+        # - If it did better than before, save its brain!
+# 11. After Learning:
+    # - Load the best brain that was saved.
+    # - Find the best way to make final decisions (optimize threshold) using the checking pictures.
+    # - Do a final test on the test pictures (if any) using the best brain and best decision rule.
+    # - Write down the final scores.
+    # - Save the final brain in different ways.
+# 12. Cleanup: Disconnect computers if needed and say the program is finished.
+
+# --- Starting the Game ---
+# This part starts the whole program when you run the file.
+# It lets you give instructions from the outside, like telling it to use a different number of learning rounds.
+# Then, it runs the main plan.

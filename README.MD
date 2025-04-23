@@ -13,6 +13,7 @@ This project provides a robust, end-to-end pipeline for multi-label classificati
 - [Installation](#installation)
 - [Usage](#usage)
 - [Model Training and Evaluation](#model-training-and-evaluation)
+- [Testing the Model](#testing-the-model)
 - [Results](#results)
 - [Future Improvements](#future-improvements)
 - [License](#license)
@@ -48,6 +49,7 @@ This project provides a robust, end-to-end pipeline for multi-label classificati
 ```plaintext
 .
 |-- script.py                # Main implementation file (PyTorch pipeline)
+|-- testscript.py            # Script for testing the model
 |-- data.csv                 # Input dataset (CSV format)
 |-- images/                  # Directory containing chest X-ray images
 |-- output/                  # Directory for model checkpoints and logs
@@ -122,6 +124,72 @@ The project expects a dataset of chest X-ray images annotated with multiple dise
 - **Metrics:** Precision, Recall, F1-score, AUC (macro, thresholded).
 - **Threshold Optimization:** Automatically searches for the best threshold on the validation set.
 - **Logging:** Detailed logs for each epoch, including metrics and checkpointing.
+
+---
+
+## Testing the Model
+
+To evaluate a trained model checkpoint on the test set, use the `testscript.py`.
+
+**Command (Bash/Linux/macOS):**
+
+```bash
+python d:\personal-projects\HealthCare\DataSets\chest-x-ray-dataset-with-lung-segmentation-1.0.0\testscript.py --checkpoint_path path/to/your/best_model.pth
+```
+
+**Command (PowerShell/Windows):**
+
+```powershell
+python d:\personal-projects\HealthCare\DataSets\chest-x-ray-dataset-with-lung-segmentation-1.0.0\testscript.py --checkpoint_path path\to\your\best_model.pth
+# Or using .\ if in the script's directory:
+# python .\testscript.py --checkpoint_path path\to\your\best_model.pth
+```
+
+**Explanation:**
+
+*   `--checkpoint_path`: **(Required)** Specify the full path to the saved model checkpoint file (e.g., `output/best_model.pth` or `output\best_model.pth` generated during training). Use the appropriate path separator for your OS (`/` for Linux/macOS, `\` for Windows).
+
+**Optional Arguments:**
+
+You can override settings stored in the checkpoint's configuration by providing additional arguments:
+
+*   `--data_dir`: Path to the directory containing the data and CSV file (e.g., `.`).
+*   `--csv_file`: Name of the CSV file (e.g., `data.csv`).
+*   `--batch_size`: Batch size for evaluation (larger sizes might speed up testing).
+*   `--device`: Device to run evaluation on (e.g., `cuda`, `cpu`).
+*   `--threshold`: Classification threshold to use (if you want to test a specific one instead of the one from the config).
+*   `--num_workers`: Number of data loading workers.
+*   `--output_dir`: Directory to save the test log file (defaults to `test_output`).
+
+**Example with overrides (Bash/Linux/macOS):**
+
+```bash
+python d:\personal-projects\HealthCare\DataSets\chest-x-ray-dataset-with-lung-segmentation-1.0.0\testscript.py \
+    --checkpoint_path output/best_model.pth \
+    --data_dir . \
+    --csv_file data.csv \
+    --batch_size 32 \
+    --device cuda \
+    --output_dir test_run_1
+```
+
+**Example with overrides (PowerShell/Windows):**
+
+```powershell
+# Single line:
+python d:\personal-projects\HealthCare\DataSets\chest-x-ray-dataset-with-lung-segmentation-1.0.0\testscript.py --checkpoint_path output\best_model.pth --data_dir . --csv_file data.csv --batch_size 32 --device cuda --output_dir test_run_1
+
+# Multi-line using backticks (`):
+python d:\personal-projects\HealthCare\DataSets\chest-x-ray-dataset-with-lung-segmentation-1.0.0\testscript.py `
+    --checkpoint_path output\best_model.pth `
+    --data_dir . `
+    --csv_file data.csv `
+    --batch_size 32 `
+    --device cuda `
+    --output_dir test_run_1
+```
+
+The script will load the specified checkpoint, prepare the test dataset based on the configuration (or overrides), run the evaluation, and print the performance metrics (Loss, Precision, Recall, F1-Score, AUC, Per-Class F1, Confusion Matrix) to the console and the log file within the specified output directory.
 
 ---
 
