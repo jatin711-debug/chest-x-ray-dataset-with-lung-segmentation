@@ -1,0 +1,17 @@
+torch
+torchvision
+transformers
+peft
+accelerate
+bitsandbytes
+datasets
+scikit-learn
+opencv-python
+Pillow
+numpy
+wandb
+sentencepiece
+protobuf
+huggingface-hub
+pandas
+flash-attn  # Optional: For better performance
